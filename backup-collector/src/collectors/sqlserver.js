@@ -1,75 +1,67 @@
 const sql = require('mssql');
-const { insertMetric, logEvent } = require('../db');
+const { insertMetric } = require('../db');
 
-const config = {
-  user: process.env.SQLSERVER_USER,
-  password: process.env.SQLSERVER_PASSWORD,
-  server: process.env.SQLSERVER_HOST,
-  database: process.env.SQLSERVER_DB,
-  options: {
-    encrypt: process.env.SQLSERVER_ENCRYPT === 'true',
-    trustServerCertificate: process.env.SQLSERVER_TRUST_CERT === 'true',
-  },
-};
+async function collectSQLServer() {
+  console.log("Connecting to SQL Server at:", process.env.SQLSERVER_HOST);
 
-async function collectSqlServerBackups() {
   let pool;
   try {
-    pool = await sql.connect(config);
+    pool = await sql.connect({
+      user: process.env.SQLSERVER_USER,
+      password: process.env.SQLSERVER_PASSWORD,
+      server: process.env.SQLSERVER_HOST,
+      port: parseInt(process.env.SQLSERVER_PORT),
+      database: 'msdb',
+      options: {
+        encrypt: false,
+        trustServerCertificate: true
+      }
+    });
+    console.log("SQL Server Connected ✅");
+  } catch (err) {
+    console.error("SQL Server connection failed ❌", err.message);
+    return;
+  }
 
+  try {
+    console.log("Querying backup history...");
     const result = await pool.request().query(`
-      SELECT
-        bs.database_name,
-        bs.type                             AS backup_type,
-        bs.backup_start_date,
-        bs.backup_finish_date,
-        bs.backup_size,
-        bs.compressed_backup_size,
-        bmf.physical_device_name           AS backup_file,
-        CASE bs.type
-          WHEN 'D' THEN 'FULL'
-          WHEN 'I' THEN 'DIFFERENTIAL'
-          WHEN 'L' THEN 'LOG'
-          ELSE bs.type
-        END AS backup_type_label
-      FROM msdb.dbo.backupset bs
-      JOIN msdb.dbo.backupmediafamily bmf
-        ON bs.media_set_id = bmf.media_set_id
-      WHERE bs.backup_finish_date >= DATEADD(HOUR, -24, GETDATE())
-      ORDER BY bs.backup_finish_date DESC
+      SELECT 
+        database_name,
+        type,
+        backup_start_date,
+        backup_finish_date,
+        DATEDIFF(MINUTE, backup_start_date, backup_finish_date) duration_minutes,
+        backup_size/1024.0/1024/1024/1024 size_gb
+      FROM backupset
+      WHERE backup_start_date >= DATEADD(DAY,-1,GETDATE())
     `);
+    console.log(`Query returned ${result.recordset.length} row(s) ✅`);
 
-    for (const row of result.recordset) {
-      const durationSeconds = row.backup_finish_date && row.backup_start_date
-        ? Math.round((new Date(row.backup_finish_date) - new Date(row.backup_start_date)) / 1000)
-        : null;
+    const typeMap = { D: 'FULL', I: 'DIFF', L: 'LOG' };
 
-      const sizeMb = row.compressed_backup_size
-        ? parseFloat((row.compressed_backup_size / 1024 / 1024).toFixed(2))
-        : row.backup_size
-          ? parseFloat((row.backup_size / 1024 / 1024).toFixed(2))
-          : null;
-
+    for (let row of result.recordset) {
+      console.log(`Inserting metric for DB: ${row.database_name}, type: ${typeMap[row.type] || row.type}`);
       await insertMetric([
-        'SQLSERVER',
+        "SQLSERVER",
         process.env.SQLSERVER_HOST,
         row.database_name,
-        row.backup_type_label,
+        typeMap[row.type] || row.type,
         row.backup_start_date,
         row.backup_finish_date,
-        durationSeconds,
-        sizeMb,
-        'SUCCESS',
+        row.duration_minutes,
+        row.size_gb,
+        "SUCCESS"
       ]);
     }
 
-    await logEvent('INFO', `SQL Server: collected ${result.recordset.length} backup record(s)`);
+    console.log("All metrics inserted ✅");
   } catch (err) {
-    console.error('SQL Server collector error:', err);
-    await logEvent('ERROR', `SQL Server collector failed: ${err.message}`);
+    console.error("SQL Server query/insert failed ❌", err.message);
   } finally {
-    if (pool) await pool.close();
+    await pool.close();
+    console.log("SQL Server connection closed.");
   }
 }
 
-module.exports = { collectSqlServerBackups };
+module.exports = collectSQLServer;
