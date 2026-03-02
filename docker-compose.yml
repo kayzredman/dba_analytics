@@ -1,0 +1,26 @@
+
+services:
+  supabase-db:
+    image: postgres:15
+    container_name: supabase-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  collector:
+    build: ./backup-collector
+    container_name: backup-collector
+    depends_on:
+      - supabase-db
+    env_file:
+      - ./backup-collector/.env
+    restart: always
+
+volumes:
+  pgdata:

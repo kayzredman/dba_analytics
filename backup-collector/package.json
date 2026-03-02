@@ -1,0 +1,21 @@
+{
+  "name": "backup-collector",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "mssql": "^12.2.0",
+    "mysql2": "^3.18.2",
+    "node-cron": "^4.2.1",
+    "oracledb": "^6.10.0",
+    "pg": "^8.19.0"
+  }
+}
