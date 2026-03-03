@@ -19,8 +19,98 @@ const q = (sql, params) => pool.query(sql, params).then(r => r.rows);
 
 // ── serve static files ───────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
 
 // ── API routes ───────────────────────────────────────────────────────────────
+
+// ── Servers CRUD ─────────────────────────────────────────────────────────────
+
+// List all servers (passwords never returned)
+app.get('/api/servers', async (_, res) => {
+  try {
+    res.json(await q(`
+      SELECT id, db_type, host, port, username, connect_string, label, enabled,
+             to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS created_at
+      FROM monitored_servers
+      ORDER BY db_type, host
+    `));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Add a new server (encrypts password with pgcrypto)
+app.post('/api/servers', async (req, res) => {
+  const { db_type, host, port, username, password, connect_string, label } = req.body;
+  const masterKey = process.env.MASTER_KEY;
+  if (!masterKey) return res.status(500).json({ error: 'MASTER_KEY not configured on server' });
+  if (!db_type || !host || !username || !password)
+    return res.status(400).json({ error: 'db_type, host, username and password are required' });
+  try {
+    const [row] = await q(
+      `INSERT INTO monitored_servers
+         (db_type, host, port, username, password_enc, connect_string, label)
+       VALUES ($1, $2, $3, $4, pgp_sym_encrypt($5, $6), $7, $8)
+       RETURNING id, db_type, host, port, username, connect_string, label, enabled`,
+      [db_type.toUpperCase(), host, port || null, username, password, masterKey,
+       connect_string || null, label || null]
+    );
+    res.status(201).json(row);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Update server details
+app.patch('/api/servers/:id', async (req, res) => {
+  const { enabled, label, password, host, port, username, connect_string, db_type } = req.body;
+  const masterKey = process.env.MASTER_KEY;
+  try {
+    let row;
+    if (password) {
+      if (!masterKey) return res.status(500).json({ error: 'MASTER_KEY not configured' });
+      [row] = await q(
+        `UPDATE monitored_servers
+         SET enabled        = COALESCE($2,  enabled),
+             label          = COALESCE($3,  label),
+             host           = COALESCE($4,  host),
+             port           = COALESCE($5,  port),
+             username       = COALESCE($6,  username),
+             connect_string = COALESCE($7,  connect_string),
+             db_type        = COALESCE($8,  db_type),
+             password_enc   = pgp_sym_encrypt($9, $10)
+         WHERE id = $1
+         RETURNING id, db_type, host, port, username, connect_string, label, enabled`,
+        [req.params.id,
+         enabled ?? null, label ?? null, host ?? null, port ?? null,
+         username ?? null, connect_string ?? null, db_type ?? null,
+         password, masterKey]
+      );
+    } else {
+      [row] = await q(
+        `UPDATE monitored_servers
+         SET enabled        = COALESCE($2,  enabled),
+             label          = COALESCE($3,  label),
+             host           = COALESCE($4,  host),
+             port           = COALESCE($5,  port),
+             username       = COALESCE($6,  username),
+             connect_string = COALESCE($7,  connect_string),
+             db_type        = COALESCE($8,  db_type)
+         WHERE id = $1
+         RETURNING id, db_type, host, port, username, connect_string, label, enabled`,
+        [req.params.id,
+         enabled ?? null, label ?? null, host ?? null, port ?? null,
+         username ?? null, connect_string ?? null, db_type ?? null]
+      );
+    }
+    if (!row) return res.status(404).json({ error: 'Server not found' });
+    res.json(row);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Delete a server
+app.delete('/api/servers/:id', async (req, res) => {
+  try {
+    await q(`DELETE FROM monitored_servers WHERE id = $1`, [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // Summary KPIs
 app.get('/api/summary', async (_, res) => {

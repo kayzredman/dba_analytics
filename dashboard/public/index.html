@@ -151,6 +151,114 @@
   }
   .filter-select:focus { outline: none; border-color: var(--accent); }
   .filter-label { font-size: 0.72rem; color: var(--muted); }
+
+  /* ── nav tabs ─────────────────────────────────────────────────────────── */
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    padding: 6px 16px; border-radius: 6px; font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; border: 1px solid transparent; color: var(--muted);
+    background: transparent; transition: all .15s;
+  }
+  .nav-tab:hover  { color: var(--text); background: var(--surface2); }
+  .nav-tab.active { color: var(--accent); border-color: var(--accent); background: rgba(88,166,255,.08); }
+
+  /* ── page sections ────────────────────────────────────────────────────── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── server cards ───────────────────────────────────────────────────────── */
+  .server-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  @media (min-width: 600px)  { .server-grid { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 1000px) { .server-grid { grid-template-columns: 1fr 1fr 1fr; } }
+
+  .server-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    transition: border-color .15s;
+  }
+  .server-card.disabled { opacity: .55; }
+  .server-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .server-card-title { font-weight: 700; font-size: 0.9rem; word-break: break-all; }
+  .server-card-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .server-card-meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: 0.75rem; color: var(--muted); }
+  .server-card-actions { display: flex; gap: 8px; margin-top: 4px; }
+
+  /* ── toggle switch ──────────────────────────────────────────────────────── */
+  .toggle { position: relative; display: inline-block; width: 38px; height: 22px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0; background: var(--border);
+    border-radius: 22px; cursor: pointer; transition: .2s;
+  }
+  .toggle-slider::before {
+    content: ''; position: absolute;
+    width: 16px; height: 16px; left: 3px; bottom: 3px;
+    background: var(--muted); border-radius: 50%; transition: .2s;
+  }
+  .toggle input:checked + .toggle-slider { background: var(--ok); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(16px); background: #fff; }
+
+  /* ── modal ───────────────────────────────────────────────────────────────── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.65); z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  @media (min-width: 600px) { .modal-overlay { align-items: center; } }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius) var(--radius) 0 0;
+    width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto;
+    padding: 24px; display: flex; flex-direction: column; gap: 16px;
+  }
+  @media (min-width: 600px) { .modal { border-radius: var(--radius); } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-weight: 700; font-size: 1rem; }
+  .modal-close {
+    background: none; border: none; color: var(--muted); font-size: 1.4rem;
+    cursor: pointer; line-height: 1; padding: 4px;
+  }
+  .modal-close:hover { color: var(--text); }
+
+  /* ── form controls ─────────────────────────────────────────────────────── */
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .form-label span { color: var(--danger); margin-left: 2px; }
+  .form-control {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 6px;
+    padding: 10px 12px; font-size: 0.88rem; width: 100%;
+    transition: border-color .15s;
+  }
+  .form-control:focus { outline: none; border-color: var(--accent); }
+  .form-control::placeholder { color: var(--muted); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-hint { font-size: 0.72rem; color: var(--muted); margin-top: -2px; }
+  .form-error { font-size: 0.78rem; color: var(--danger); padding: 8px 12px; background: rgba(248,81,73,.1); border-radius: 6px; display: none; }
+  .form-error.visible { display: block; }
+
+  /* ── page toolbar ─────────────────────────────────────────────────────── */
+  .page-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px; margin-bottom: 4px;
+  }
+  .page-toolbar h2 { font-size: 1rem; font-weight: 700; }
+  .page-toolbar p  { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .btn-danger { background: rgba(248,81,73,.12); color: var(--danger); border-color: var(--danger); }
+  .btn-danger:hover { background: rgba(248,81,73,.25); }
 </style>
 </head>
 <body>
@@ -159,8 +267,12 @@
 <header>
   <div class="brand">
     <div class="brand-icon">🛡</div>
-    Database Analytics Dashboard
+    <span class="brand-name">DBA Backup Platform</span>
   </div>
+  <nav class="nav-tabs">
+    <button class="nav-tab active" id="tab-dashboard" onclick="showPage('dashboard')">Dashboard</button>
+    <button class="nav-tab"         id="tab-servers"   onclick="showPage('servers')">Servers</button>
+  </nav>
   <div class="meta">
     <span class="last-updated" id="lastUpdated">Loading…</span>
     <button class="btn btn-primary" id="refreshBtn" onclick="loadAll()">
@@ -170,6 +282,62 @@
 </header>
 
 <main>
+
+<!-- ── ADD SERVER MODAL ─────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="addServerModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Add Monitored Server</span>
+      <button class="modal-close" onclick="closeModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="form-error" id="modalError"></div>
+    <div class="form-group">
+      <label class="form-label">DB Type <span>*</span></label>
+      <select class="form-control" id="fDbType">
+        <option value="">Select type…</option>
+        <option value="SQLSERVER">SQL Server</option>
+        <option value="ORACLE">Oracle</option>
+        <option value="MYSQL">MySQL / MariaDB</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Friendly Label</label>
+      <input class="form-control" id="fLabel" type="text" placeholder="e.g. Finance SQL Server" />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Host / IP <span>*</span></label>
+        <input class="form-control" id="fHost" type="text" placeholder="10.0.0.1" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Port</label>
+        <input class="form-control" id="fPort" type="number" placeholder="1433" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Username <span>*</span></label>
+      <input class="form-control" id="fUsername" type="text" placeholder="sa / sys / DBA" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password <span>*</span></label>
+      <input class="form-control" id="fPassword" type="password" placeholder="••••••••" />
+      <span class="form-hint">🔒 Encrypted with AES-256 before storage</span>
+      <span class="form-hint" id="fPasswordHint" style="display:none;color:var(--warn)">Leave blank to keep the current password</span>
+    </div>
+    <div class="form-group" id="fConnStringGroup" style="display:none">
+      <label class="form-label">Oracle Connect String <span>*</span></label>
+      <input class="form-control" id="fConnString" type="text"
+        placeholder="(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=...)(PORT=1521))(CONNECT_DATA=(SID=...)))" />
+      <span class="form-hint">Full TNS connect string or host:port/service</span>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn" style="flex:1" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:2" id="modalSaveBtn" onclick="submitServerForm()">Add Server</button>
+    </div>
+  </div>
+</div>
+
+<div id="page-dashboard" class="page active">
 
   <!-- ── KPI CARDS ────────────────────────────────────────────────────────── -->
   <div class="kpi-row">
@@ -322,6 +490,22 @@
       </div>
     </div>
   </div>
+
+</div><!-- /#page-dashboard -->
+
+<!-- ── SERVERS PAGE ──────────────────────────────────────────────────────────── -->
+<div id="page-servers" class="page">
+  <div class="page-toolbar">
+    <div>
+      <h2>Monitored Servers</h2>
+      <p>All servers are collected from every hour. Add, enable/disable or remove entries below.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal()">+ Add Server</button>
+  </div>
+  <div class="server-grid" id="serverGrid">
+    <div style="color:var(--muted);font-size:.85rem;padding:24px 0">Loading…</div>
+  </div>
+</div>
 
 </main>
 
@@ -667,7 +851,212 @@ async function loadAll() {
     icon.classList.remove('spin');
   }
 }
+// ── Page switching ────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
 
+  // hide refresh button and last-updated on servers page
+  const isDash = name === 'dashboard';
+  document.getElementById('refreshBtn').style.display  = isDash ? '' : 'none';
+  document.getElementById('lastUpdated').style.display = isDash ? '' : 'none';
+
+  if (name === 'servers') loadServers();
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+let _editingServerId = null;
+
+function _resetModal() {
+  document.getElementById('fDbType').value    = '';
+  document.getElementById('fLabel').value     = '';
+  document.getElementById('fHost').value      = '';
+  document.getElementById('fPort').value      = '';
+  document.getElementById('fUsername').value  = '';
+  document.getElementById('fPassword').value  = '';
+  document.getElementById('fConnString').value = '';
+  document.getElementById('fConnStringGroup').style.display = 'none';
+  document.getElementById('fPasswordHint').style.display    = 'none';
+  document.getElementById('modalError').classList.remove('visible');
+  document.getElementById('modalSaveBtn').classList.remove('loading');
+}
+
+function openModal() {
+  _editingServerId = null;
+  _resetModal();
+  document.getElementById('modalTitle').textContent    = 'Add Monitored Server';
+  document.getElementById('modalSaveBtn').textContent  = 'Add Server';
+  document.getElementById('fDbType').disabled          = false;
+  document.getElementById('addServerModal').classList.add('open');
+}
+
+function openEditModal(s) {
+  _editingServerId = s.id;
+  _resetModal();
+  document.getElementById('modalTitle').textContent    = 'Edit Server';
+  document.getElementById('modalSaveBtn').textContent  = 'Save Changes';
+
+  document.getElementById('fDbType').value   = s.db_type   || '';
+  document.getElementById('fLabel').value    = s.label     || '';
+  document.getElementById('fHost').value     = s.host      || '';
+  document.getElementById('fPort').value     = s.port      || '';
+  document.getElementById('fUsername').value = s.username  || '';
+  document.getElementById('fPassword').value = '';  // never pre-fill password
+  document.getElementById('fPasswordHint').style.display = 'block';
+
+  if (s.db_type === 'ORACLE') {
+    document.getElementById('fConnStringGroup').style.display = 'flex';
+    document.getElementById('fConnString').value = s.connect_string || '';
+  }
+  // db_type locked in edit mode (changing it would confuse collection)
+  document.getElementById('fDbType').disabled = true;
+  document.getElementById('addServerModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('addServerModal').classList.remove('open');
+  _editingServerId = null;
+}
+// Show Oracle connect string field only for Oracle
+document.getElementById('fDbType').addEventListener('change', function() {
+  document.getElementById('fConnStringGroup').style.display =
+    this.value === 'ORACLE' ? 'flex' : 'none';
+  // set default ports
+  const portMap = { SQLSERVER: 1433, ORACLE: 1521, MYSQL: 3306 };
+  document.getElementById('fPort').value = portMap[this.value] || '';
+});
+// Close modal on overlay click
+document.getElementById('addServerModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+async function submitServerForm() {
+  const errEl   = document.getElementById('modalError');
+  const saveBtn = document.getElementById('modalSaveBtn');
+  errEl.classList.remove('visible');
+
+  const isEdit   = _editingServerId !== null;
+  const password = document.getElementById('fPassword').value;
+
+  const body = {
+    db_type:        document.getElementById('fDbType').value,
+    label:          document.getElementById('fLabel').value.trim()    || null,
+    host:           document.getElementById('fHost').value.trim(),
+    port:           parseInt(document.getElementById('fPort').value)  || null,
+    username:       document.getElementById('fUsername').value.trim(),
+    connect_string: document.getElementById('fConnString').value.trim() || null,
+  };
+  if (password) body.password = password;
+
+  // Validation
+  if (!isEdit && !password) {
+    errEl.textContent = 'Password is required.';
+    errEl.classList.add('visible'); return;
+  }
+  if (!body.db_type || !body.host || !body.username) {
+    errEl.textContent = 'DB Type, Host and Username are required.';
+    errEl.classList.add('visible'); return;
+  }
+  if (body.db_type === 'ORACLE' && !body.connect_string) {
+    errEl.textContent = 'Oracle Connect String is required.';
+    errEl.classList.add('visible'); return;
+  }
+
+  saveBtn.classList.add('loading');
+  try {
+    const url    = isEdit ? `/api/servers/${_editingServerId}` : '/api/servers';
+    const method = isEdit ? 'PATCH' : 'POST';
+    const r = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Unknown error');
+    closeModal();
+    loadServers();
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.classList.add('visible');
+  } finally {
+    saveBtn.classList.remove('loading');
+  }
+}
+
+// ── Servers list ──────────────────────────────────────────────────────────────
+// store server objects for edit access
+let _serverCache = {};
+
+async function loadServers() {
+  const grid = document.getElementById('serverGrid');
+  grid.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:24px 0">Loading…</div>';
+  try {
+    const servers = await api('/api/servers');
+    _serverCache = {};
+    servers.forEach(s => { _serverCache[s.id] = s; });
+    if (!servers.length) {
+      grid.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:24px 0">No servers registered yet. Click “+ Add Server” to get started.</div>';
+      return;
+    }
+    grid.innerHTML = servers.map(s => serverCard(s)).join('');
+  } catch(e) {
+    grid.innerHTML = `<div style="color:var(--danger);font-size:.85rem">❌ ${e.message}</div>`;
+  }
+}
+
+function serverCard(s) {
+  const dbType = s.db_type?.toUpperCase();
+  const label  = s.label  || s.host;
+  const port   = s.port   ? `:${s.port}` : '';
+  const typeMap = { SQLSERVER: 'SQL Server', ORACLE: 'Oracle', MYSQL: 'MySQL' };
+  return `
+  <div class="server-card ${s.enabled ? '' : 'disabled'}" id="scard-${s.id}">
+    <div class="server-card-top">
+      <div>
+        <div class="server-card-title">${label}</div>
+        <div class="server-card-sub">${s.host}${port}</div>
+      </div>
+      <label class="toggle" title="${s.enabled ? 'Enabled — click to disable' : 'Disabled — click to enable'}">
+        <input type="checkbox" ${s.enabled ? 'checked' : ''}
+          onchange="toggleServer(${s.id}, this.checked)" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="server-card-meta">
+      ${dbBadge(dbType)}
+      <span>👤 ${s.username}</span>
+      <span>📅 Added ${s.created_at}</span>
+    </div>
+    <div class="server-card-actions">
+      <button class="btn" style="flex:1;font-size:.76rem"
+        onclick="openEditModal(_serverCache[${s.id}])">Edit</button>
+      <button class="btn btn-danger" style="flex:1;font-size:.76rem"
+        onclick="deleteServer(${s.id}, '${label.replace(/'/g, "\\'")}')">Delete</button>
+    </div>
+  </div>`;
+}
+
+async function toggleServer(id, enabled) {
+  try {
+    await fetch(`/api/servers/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled })
+    });
+    const card = document.getElementById('scard-' + id);
+    if (card) card.classList.toggle('disabled', !enabled);
+  } catch(e) { console.error('Toggle failed:', e); }
+}
+
+async function deleteServer(id, label) {
+  if (!confirm(`Delete "${label}"?\n\nThis will stop collecting from this server. Existing metrics are kept.`)) return;
+  try {
+    await fetch(`/api/servers/${id}`, { method: 'DELETE' });
+    loadServers();
+  } catch(e) { alert('Delete failed: ' + e.message); }
+}
 // ── auto-refresh every 5 minutes ──────────────────────────────────────────────
 loadAll();
 setInterval(loadAll, 5 * 60 * 1000);

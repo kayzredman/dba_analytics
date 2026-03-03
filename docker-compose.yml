@@ -43,6 +43,7 @@ services:
       SUPABASE_USER: postgres
       SUPABASE_PASSWORD: postgres
       SUPABASE_DB: postgres
+      MASTER_KEY: ${MASTER_KEY:-change-me-to-a-strong-random-secret-key}
     ports:
       - "3000:3000"
     restart: always
