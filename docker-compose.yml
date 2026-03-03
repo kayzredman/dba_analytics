@@ -13,12 +13,19 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./supabase/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   collector:
     build: ./backup-collector
     container_name: backup-collector
     depends_on:
-      - supabase-db
+      supabase-db:
+        condition: service_healthy
     env_file:
       - ./backup-collector/.env
     restart: always
@@ -27,7 +34,8 @@ services:
     build: ./dashboard
     container_name: backup-dashboard
     depends_on:
-      - supabase-db
+      supabase-db:
+        condition: service_healthy
     environment:
       SUPABASE_HOST: supabase-db
       SUPABASE_USER: postgres
@@ -44,10 +52,14 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
     ports:
       - "5050:80"
+    volumes:
+      - ./supabase/pgadmin-servers.json:/pgadmin4/servers.json:ro
     depends_on:
-      - supabase-db
+      supabase-db:
+        condition: service_healthy
 
 volumes:
   pgdata:

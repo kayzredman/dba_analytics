@@ -139,6 +139,18 @@
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   .spin { display: inline-block; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── filters ─────────────────────────────────────────────────────────────── */
+  .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .filter-select {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b949e'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center; padding-right: 24px;
+  }
+  .filter-select:focus { outline: none; border-color: var(--accent); }
+  .filter-label { font-size: 0.72rem; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -272,10 +284,32 @@
     </div>
 
     <div class="card">
-      <div class="card-header">
+      <div class="card-header" style="flex-wrap:wrap;gap:10px">
         <div>
           <div class="card-title">Recent Backup Jobs</div>
-          <div class="card-subtitle">Last 100 jobs across all databases</div>
+          <div class="card-subtitle" id="recentSubtitle">Last 100 jobs across all databases</div>
+        </div>
+        <div class="filter-row">
+          <span class="filter-label">DB</span>
+          <select class="filter-select" id="filterDbType" onchange="applyRecentFilters()">
+            <option value="">All Types</option>
+            <option value="MSSQL">MSSQL</option>
+            <option value="ORACLE">Oracle</option>
+            <option value="MYSQL">MySQL</option>
+          </select>
+          <span class="filter-label">Backup</span>
+          <select class="filter-select" id="filterBackupType" onchange="applyRecentFilters()">
+            <option value="">All</option>
+            <option value="FULL">FULL</option>
+            <option value="DIFF">DIFF</option>
+            <option value="LOG">LOG</option>
+          </select>
+          <span class="filter-label">Status</span>
+          <select class="filter-select" id="filterStatus" onchange="applyRecentFilters()">
+            <option value="">All</option>
+            <option value="SUCCESS">Success</option>
+            <option value="FAILED">Failed</option>
+          </select>
         </div>
       </div>
       <div class="table-wrap" style="max-height:340px;overflow-y:auto">
@@ -556,11 +590,37 @@ async function loadAlerts() {
 }
 
 // ── Recent Backups Table ──────────────────────────────────────────────────────
+let recentData = [];
+
 async function loadRecent() {
-  const data = await api('/api/recent');
+  recentData = await api('/api/recent');
+  applyRecentFilters();
+}
+
+function applyRecentFilters() {
+  const dbType     = document.getElementById('filterDbType').value.toUpperCase();
+  const backupType = document.getElementById('filterBackupType').value.toUpperCase();
+  const status     = document.getElementById('filterStatus').value.toUpperCase();
+
+  const filtered = recentData.filter(r => {
+    if (dbType     && r.db_type?.toUpperCase()     !== dbType)     return false;
+    if (backupType && r.backup_type?.toUpperCase() !== backupType) return false;
+    if (status     && r.status?.toUpperCase()      !== status)     return false;
+    return true;
+  });
+
   const tbody = document.getElementById('recentTable');
-  if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted)">No data</td></tr>'; return; }
-  tbody.innerHTML = data.map(r => {
+  const sub   = document.getElementById('recentSubtitle');
+  const activeFilters = [dbType, backupType, status].filter(Boolean).length;
+  sub.textContent = activeFilters
+    ? `${filtered.length} of ${recentData.length} jobs (filtered)`
+    : `Last ${recentData.length} jobs across all databases`;
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted)">No matching jobs</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(r => {
     const ok = r.status?.toUpperCase() === 'SUCCESS';
     const statusBadge = `<span class="badge ${ok ? 'badge-ok' : 'badge-danger'}">${r.status}</span>`;
     return `<tr>
