@@ -1,8 +1,15 @@
 const cron = require('node-cron');
 const { insertMetric } = require('./db');
 const collectSQLServer = require('./collectors/sqlserver');
+const collectOracle = require('./collectors/oracle');
 
 console.log("Backup Collector Started...");
+
+// Run immediately on startup
+(async () => {
+  // try { await collectSQLServer(); } catch (err) { console.error("SQL Collector error:", err); }
+  try { await collectOracle(); } catch (err) { console.error("Oracle Collector error:", err); }
+})();
 
 cron.schedule('*/5 * * * *', async () => {
   try {
@@ -31,5 +38,13 @@ cron.schedule('0 * * * *', async () => {
     await collectSQLServer();
   } catch (err) {
     console.error("SQL Collector error:", err);
+  }
+});
+
+cron.schedule('0 * * * *', async () => {
+  try {
+    await collectOracle();
+  } catch (err) {
+    console.error("Oracle Collector error:", err);
   }
 });
