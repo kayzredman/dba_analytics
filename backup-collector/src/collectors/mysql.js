@@ -58,7 +58,7 @@ async function collectMySQL() {
         size_gb,
         status
       FROM backup_log
-      WHERE start_time >= NOW() - INTERVAL 1 DAY
+      WHERE start_time >= NOW() - INTERVAL 7 DAY
       ORDER BY start_time DESC
     `);
 

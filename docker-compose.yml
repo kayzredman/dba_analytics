@@ -23,5 +23,31 @@ services:
       - ./backup-collector/.env
     restart: always
 
+  dashboard:
+    build: ./dashboard
+    container_name: backup-dashboard
+    depends_on:
+      - supabase-db
+    environment:
+      SUPABASE_HOST: supabase-db
+      SUPABASE_USER: postgres
+      SUPABASE_PASSWORD: postgres
+      SUPABASE_DB: postgres
+    ports:
+      - "3000:3000"
+    restart: always
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - supabase-db
+
 volumes:
   pgdata:

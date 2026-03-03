@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DBA Backup Platform</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  /* ── reset & base ─────────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --surface2:  #1e2530;
+    --border:    #30363d;
+    --text:      #e6edf3;
+    --muted:     #8b949e;
+    --mssql:     #0078d4;
+    --oracle:    #c74634;
+    --mysql:     #4479a1;
+    --ok:        #3fb950;
+    --warn:      #d29922;
+    --danger:    #f85149;
+    --accent:    #58a6ff;
+    --radius:    10px;
+  }
+  html { font-size: 14px; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+  a { color: var(--accent); }
+
+  /* ── layout ───────────────────────────────────────────────────────────────── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem; }
+  header .brand-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  header .meta { display: flex; align-items: center; gap: 16px; }
+  header .last-updated { color: var(--muted); font-size: 0.78rem; }
+  .btn {
+    padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); display: flex; align-items: center; gap: 6px;
+    transition: background .15s, border-color .15s;
+  }
+  .btn:hover { background: var(--border); border-color: var(--muted); }
+  .btn-primary { background: var(--accent); color: #000; border-color: var(--accent); }
+  .btn-primary:hover { background: #79c0ff; }
+  .btn.loading { opacity: .6; pointer-events: none; }
+
+  main { padding: 24px; max-width: 1600px; margin: 0 auto; }
+
+  /* ── kpi cards ────────────────────────────────────────────────────────────── */
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--accent); border-radius: var(--radius) 0 0 var(--radius); }
+  .kpi-card.danger::before { background: var(--danger); }
+  .kpi-card.ok::before    { background: var(--ok); }
+  .kpi-card.warn::before  { background: var(--warn); }
+  .kpi-label  { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  .kpi-value  { font-size: 2rem; font-weight: 700; line-height: 1; }
+  .kpi-sub    { font-size: 0.72rem; color: var(--muted); margin-top: 6px; }
+
+  /* ── section grid ─────────────────────────────────────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 1100px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 800px)  { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .card-title { font-weight: 600; font-size: 0.88rem; color: var(--text); }
+  .card-subtitle { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas { width: 100% !important; }
+
+  /* ── tables ───────────────────────────────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 0.68rem; letter-spacing: .06em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  /* ── badges ───────────────────────────────────────────────────────────────── */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  }
+  .badge-ok      { background: rgba(63,185,80,.15);  color: var(--ok); }
+  .badge-warn    { background: rgba(210,153,34,.15); color: var(--warn); }
+  .badge-danger  { background: rgba(248,81,73,.15);  color: var(--danger); }
+  .badge-mssql   { background: rgba(0,120,212,.15);  color: var(--mssql); }
+  .badge-oracle  { background: rgba(199,70,52,.15);  color: var(--oracle); }
+  .badge-mysql   { background: rgba(68,121,161,.15); color: var(--mysql); }
+
+  /* ── alerts panel ─────────────────────────────────────────────────────────── */
+  .alert-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+  .alert-item {
+    background: var(--surface2); border-radius: 6px; padding: 10px 14px;
+    border-left: 3px solid var(--danger); font-size: 0.8rem;
+  }
+  .alert-item.warn  { border-left-color: var(--warn); }
+  .alert-item.info  { border-left-color: var(--accent); }
+  .alert-item .alert-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+  .alert-item .alert-msg { color: var(--muted); font-size: 0.75rem; }
+
+  /* ── rpo table colors ─────────────────────────────────────────────────────── */
+  .rpo-ok      { color: var(--ok); }
+  .rpo-warn    { color: var(--warn); }
+  .rpo-danger  { color: var(--danger); font-weight: 700; }
+
+  /* ── full-width cards ─────────────────────────────────────────────────────── */
+  .card-full { margin-bottom: 16px; }
+
+  /* ── spinner ──────────────────────────────────────────────────────────────── */
+  .skeleton { background: var(--surface2); border-radius: 4px; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .spin { display: inline-block; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────────────────────── -->
+<header>
+  <div class="brand">
+    <div class="brand-icon">🛡</div>
+    DBA Backup Platform
+  </div>
+  <div class="meta">
+    <span class="last-updated" id="lastUpdated">Loading…</span>
+    <button class="btn btn-primary" id="refreshBtn" onclick="loadAll()">
+      <span id="refreshIcon">↻</span> Refresh
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── KPI CARDS ────────────────────────────────────────────────────────── -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Databases Monitored</div>
+      <div class="kpi-value" id="kpiDbs">–</div>
+      <div class="kpi-sub">Across all DB types</div>
+    </div>
+    <div class="kpi-card ok">
+      <div class="kpi-label">Total Backups (30d)</div>
+      <div class="kpi-value" id="kpiJobs">–</div>
+      <div class="kpi-sub">All DB types combined</div>
+    </div>
+    <div class="kpi-card" id="kpiSuccessCard">
+      <div class="kpi-label">Overall Success Rate</div>
+      <div class="kpi-value" id="kpiSuccess">–</div>
+      <div class="kpi-sub">Last 30 days</div>
+    </div>
+    <div class="kpi-card danger">
+      <div class="kpi-label">Active Alerts</div>
+      <div class="kpi-value" id="kpiAlerts">–</div>
+      <div class="kpi-sub" id="kpiLastCollected">–</div>
+    </div>
+  </div>
+
+  <!-- ── ROW 1: Success Rate doughnut + RPO Status ─────────────────────────── -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Success Rate by DB Type</div>
+          <div class="card-subtitle">Last 30 days</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="chartSuccess"></canvas>
+      </div>
+      <div id="successLegend" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;font-size:.78rem;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">RPO Status</div>
+          <div class="card-subtitle">Hours since last successful backup</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>DB Type</th><th>Database</th><th>Last Backup</th><th>Hours Ago</th><th>Status</th></tr>
+          </thead>
+          <tbody id="rpoTable"><tr><td colspan="5" style="color:var(--muted)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ROW 2: Size per day + Duration ────────────────────────────────────── -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Daily Backup Size</div>
+          <div class="card-subtitle">GB transferred per day (last 30 days)</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="chartSize"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Average Backup Duration</div>
+          <div class="card-subtitle">Minutes per database (last 30 days)</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="chartDuration"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ROW 3: Monthly trend ───────────────────────────────────────────────── -->
+  <div class="card card-full">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Monthly Backup Trend</div>
+        <div class="card-subtitle">Total jobs and size per month by DB type</div>
+      </div>
+    </div>
+    <div class="chart-wrap" style="height:240px">
+      <canvas id="chartMonthly"></canvas>
+    </div>
+  </div>
+
+  <!-- ── ROW 4: Alerts + Recent Backups ────────────────────────────────────── -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Active Alerts</div>
+          <div class="card-subtitle" id="alertCount">0 unresolved</div>
+        </div>
+        <button class="btn" onclick="refreshAlerts()">Refresh Alerts</button>
+      </div>
+      <div class="alert-list" id="alertList">
+        <div style="color:var(--muted);font-size:.8rem">Loading…</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Recent Backup Jobs</div>
+          <div class="card-subtitle">Last 100 jobs across all databases</div>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:340px;overflow-y:auto">
+        <table>
+          <thead>
+            <tr><th>DB</th><th>Database</th><th>Type</th><th>Status</th><th>Size (GB)</th><th>Duration (min)</th><th>Start Time</th></tr>
+          </thead>
+          <tbody id="recentTable"><tr><td colspan="7" style="color:var(--muted)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── constants ─────────────────────────────────────────────────────────────────
+const DB_COLORS = {
+  MSSQL:  '#0078d4',
+  ORACLE: '#c74634',
+  MYSQL:  '#4479a1',
+  MARIADB:'#c0765a',
+};
+const DB_BG = {
+  MSSQL:  'rgba(0,120,212,.15)',
+  ORACLE: 'rgba(199,70,52,.15)',
+  MYSQL:  'rgba(68,121,161,.15)',
+  MARIADB:'rgba(192,118,90,.15)',
+};
+function dbColor(t, alpha=1) {
+  const c = DB_COLORS[t?.toUpperCase()] || '#58a6ff';
+  if (alpha === 1) return c;
+  const r=parseInt(c.slice(1,3),16), g=parseInt(c.slice(3,5),16), b=parseInt(c.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function dbBadge(t) {
+  const k = t?.toUpperCase();
+  return `<span class="badge badge-${k === 'MSSQL' ? 'mssql' : k === 'ORACLE' ? 'oracle' : 'mysql'}">${t}</span>`;
+}
+const chartDefaults = {
+  plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 } } } },
+  scales: {
+    x: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#21262d' } },
+    y: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#21262d' } },
+  }
+};
+
+// ── chart instances ───────────────────────────────────────────────────────────
+let charts = {};
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+// ── fetch helpers ─────────────────────────────────────────────────────────────
+async function api(path) {
+  const r = await fetch(path);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+// ── KPI Cards ─────────────────────────────────────────────────────────────────
+async function loadSummary() {
+  const d = await api('/api/summary');
+  document.getElementById('kpiDbs').textContent     = d.databases_monitored ?? 0;
+  document.getElementById('kpiJobs').textContent    = d.total_jobs_30d ?? 0;
+  const pct = parseFloat(d.overall_success_pct ?? 0);
+  document.getElementById('kpiSuccess').textContent = pct.toFixed(1) + '%';
+  const card = document.getElementById('kpiSuccessCard');
+  card.className = 'kpi-card ' + (pct >= 90 ? 'ok' : pct >= 70 ? 'warn' : 'danger');
+  document.getElementById('kpiAlerts').textContent  = d.active_alerts ?? 0;
+  const lc = d.last_collected ? new Date(d.last_collected).toLocaleString() : 'Never';
+  document.getElementById('kpiLastCollected').textContent = 'Last collected: ' + lc;
+  document.getElementById('lastUpdated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+}
+
+// ── Success Rate Doughnut ─────────────────────────────────────────────────────
+async function loadSuccessChart() {
+  const data = await api('/api/success-rate');
+  destroyChart('success');
+  const labels = data.map(r => r.db_type);
+  const values = data.map(r => parseFloat(r.success_pct));
+  const colors = labels.map(l => dbColor(l));
+
+  charts.success = new Chart(document.getElementById('chartSuccess'), {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: colors, borderColor: '#161b22', borderWidth: 3, hoverOffset: 6 }]
+    },
+    options: {
+      cutout: '65%',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}%` }
+        },
+        datalabels: {
+          color: '#e6edf3',
+          font: { weight: 'bold', size: 13 },
+          formatter: v => v + '%',
+        }
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+
+  // Custom legend
+  const leg = document.getElementById('successLegend');
+  leg.innerHTML = data.map((r, i) => `
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="width:10px;height:10px;border-radius:50%;background:${colors[i]};display:inline-block"></span>
+      <span>${r.db_type}</span>
+      <strong>${r.success_pct}%</strong>
+      <span style="color:var(--muted)">(${r.total_jobs} jobs)</span>
+    </div>
+  `).join('');
+}
+
+// ── RPO Table ─────────────────────────────────────────────────────────────────
+async function loadRPO() {
+  const data = await api('/api/rpo-status');
+  const tbody = document.getElementById('rpoTable');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">No data</td></tr>'; return; }
+  tbody.innerHTML = data.map(r => {
+    const cls = r.rpo_status === 'OK' ? 'rpo-ok' : r.rpo_status === 'WARNING' ? 'rpo-warn' : 'rpo-danger';
+    const last = r.last_backup_time ? new Date(r.last_backup_time).toLocaleString() : '—';
+    return `<tr>
+      <td>${dbBadge(r.db_type)}</td>
+      <td>${r.database_name}</td>
+      <td style="color:var(--muted)">${last}</td>
+      <td>${r.hours_since_last_backup ?? '—'}</td>
+      <td class="${cls}">${r.rpo_status}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Size Per Day Line Chart ───────────────────────────────────────────────────
+async function loadSizeChart() {
+  const raw = await api('/api/size-per-day');
+  destroyChart('size');
+
+  const allDates = [...new Set(raw.map(r => r.backup_date?.slice(0,10)))].sort();
+  const dbTypes  = [...new Set(raw.map(r => r.db_type))];
+  const byType   = {};
+  for (const t of dbTypes) {
+    byType[t] = allDates.map(d => {
+      const rows = raw.filter(r => r.backup_date?.slice(0,10) === d && r.db_type === t);
+      return rows.reduce((s, r) => s + parseFloat(r.total_size_gb || 0), 0) || null;
+    });
+  }
+
+  charts.size = new Chart(document.getElementById('chartSize'), {
+    type: 'line',
+    data: {
+      labels: allDates,
+      datasets: dbTypes.map(t => ({
+        label: t,
+        data: byType[t],
+        borderColor: dbColor(t),
+        backgroundColor: dbColor(t, 0.12),
+        fill: true,
+        tension: 0.35,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { ...chartDefaults.plugins, datalabels: { display: false } },
+      scales: {
+        x: { ...chartDefaults.scales.x, ticks: { ...chartDefaults.scales.x.ticks, maxTicksLimit: 10 } },
+        y: { ...chartDefaults.scales.y, title: { display: true, text: 'GB', color: '#8b949e', font: { size: 10 } } }
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+}
+
+// ── Duration Bar Chart ────────────────────────────────────────────────────────
+async function loadDurationChart() {
+  const raw = await api('/api/duration');
+  destroyChart('duration');
+
+  const labels = raw.map(r => `${r.database_name} (${r.backup_type})`);
+  const avgs   = raw.map(r => parseFloat(r.avg_duration_minutes) || 0);
+  const maxs   = raw.map(r => parseFloat(r.max_duration_minutes) || 0);
+  const colors = raw.map(r => dbColor(r.db_type));
+
+  charts.duration = new Chart(document.getElementById('chartDuration'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Avg (min)', data: avgs, backgroundColor: colors.map(c => c + 'aa'), borderColor: colors, borderWidth: 1 },
+        { label: 'Max (min)', data: maxs, backgroundColor: 'transparent', borderColor: colors, borderWidth: 1, type: 'line', pointRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { ...chartDefaults.plugins, datalabels: { display: false } },
+      scales: {
+        x: { ...chartDefaults.scales.x, title: { display: true, text: 'Minutes', color: '#8b949e', font: { size: 10 } } },
+        y: { ...chartDefaults.scales.y, ticks: { ...chartDefaults.scales.y.ticks, font: { size: 9 } } }
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+}
+
+// ── Monthly Trend Bar Chart ───────────────────────────────────────────────────
+async function loadMonthlyChart() {
+  const raw = await api('/api/monthly-trend');
+  destroyChart('monthly');
+
+  const months  = [...new Set(raw.map(r => r.month))].sort();
+  const dbTypes = [...new Set(raw.map(r => r.db_type))];
+
+  const totalJobsets = dbTypes.map(t => ({
+    label: `${t} jobs`,
+    data: months.map(m => {
+      const row = raw.find(r => r.month === m && r.db_type === t);
+      return row ? parseInt(row.total_jobs) : 0;
+    }),
+    backgroundColor: dbColor(t, 0.6),
+    borderColor: dbColor(t),
+    borderWidth: 1,
+    stack: 'jobs',
+  }));
+
+  charts.monthly = new Chart(document.getElementById('chartMonthly'), {
+    type: 'bar',
+    data: { labels: months, datasets: totalJobsets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        ...chartDefaults.plugins,
+        datalabels: { display: false },
+        tooltip: {
+          callbacks: {
+            afterBody: (items) => {
+              const month = items[0]?.label;
+              const mRows = raw.filter(r => r.month === month);
+              const totalSize = mRows.reduce((s, r) => s + parseFloat(r.total_size_gb||0), 0);
+              return [`Total size: ${totalSize.toFixed(2)} GB`];
+            }
+          }
+        }
+      },
+      scales: {
+        x: chartDefaults.scales.x,
+        y: { ...chartDefaults.scales.y, stacked: true, title: { display: true, text: 'Jobs', color: '#8b949e', font: { size: 10 } } }
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+}
+
+// ── Alerts Panel ──────────────────────────────────────────────────────────────
+async function loadAlerts() {
+  const data = await api('/api/alerts');
+  document.getElementById('alertCount').textContent = data.length + ' unresolved';
+  const list = document.getElementById('alertList');
+  if (!data.length) {
+    list.innerHTML = '<div style="color:var(--ok);font-size:.8rem;padding:8px 0">✓ No active alerts</div>';
+    return;
+  }
+  const typeClasses = { BACKUP_FAILED: '', RPO_VIOLATION: 'warn', SIZE_SPIKE: 'warn' };
+  list.innerHTML = data.map(a => `
+    <div class="alert-item ${typeClasses[a.alert_type] || ''}">
+      <div class="alert-top">
+        ${dbBadge(a.db_type)}
+        <span style="font-weight:600">${a.alert_type.replace(/_/g,' ')}</span>
+        <span style="color:var(--muted);font-size:.7rem;margin-left:auto">${a.created_at}</span>
+      </div>
+      <div class="alert-msg">${a.message}</div>
+    </div>
+  `).join('');
+}
+
+// ── Recent Backups Table ──────────────────────────────────────────────────────
+async function loadRecent() {
+  const data = await api('/api/recent');
+  const tbody = document.getElementById('recentTable');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted)">No data</td></tr>'; return; }
+  tbody.innerHTML = data.map(r => {
+    const ok = r.status?.toUpperCase() === 'SUCCESS';
+    const statusBadge = `<span class="badge ${ok ? 'badge-ok' : 'badge-danger'}">${r.status}</span>`;
+    return `<tr>
+      <td>${dbBadge(r.db_type)}</td>
+      <td>${r.database_name}</td>
+      <td style="color:var(--muted)">${r.backup_type}</td>
+      <td>${statusBadge}</td>
+      <td>${r.size_gb != null ? parseFloat(r.size_gb).toFixed(3) : '—'}</td>
+      <td>${r.duration_minutes ?? '—'}</td>
+      <td style="color:var(--muted)">${r.backup_start_date ?? '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Refresh alerts (server-side function) ─────────────────────────────────────
+async function refreshAlerts() {
+  try {
+    await fetch('/api/refresh-alerts', { method: 'POST' });
+    await Promise.all([loadAlerts(), loadSummary()]);
+  } catch(e) { console.error(e); }
+}
+
+// ── Load all ──────────────────────────────────────────────────────────────────
+async function loadAll() {
+  const btn  = document.getElementById('refreshBtn');
+  const icon = document.getElementById('refreshIcon');
+  btn.classList.add('loading');
+  icon.classList.add('spin');
+  try {
+    await Promise.all([
+      loadSummary(),
+      loadSuccessChart(),
+      loadRPO(),
+      loadSizeChart(),
+      loadDurationChart(),
+      loadMonthlyChart(),
+      loadAlerts(),
+      loadRecent(),
+    ]);
+  } catch(e) {
+    console.error('Dashboard load error:', e);
+  } finally {
+    btn.classList.remove('loading');
+    icon.classList.remove('spin');
+  }
+}
+
+// ── auto-refresh every 5 minutes ──────────────────────────────────────────────
+loadAll();
+setInterval(loadAll, 5 * 60 * 1000);
+</script>
+</body>
+</html>
