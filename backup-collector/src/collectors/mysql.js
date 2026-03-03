@@ -1,16 +1,17 @@
 const mysql = require('mysql2/promise');
 const { insertMetric, logEvent } = require('../db');
 
-async function collectMySQL() {
+// server: { host, port, username, password, label, db_type }
+async function collectMySQL(server) {
   let conn;
   try {
-    console.log("Connecting to MySQL/MariaDB at:", process.env.MYSQL_HOST);
+    console.log(`Connecting to MySQL/MariaDB at: ${server.host} [${server.label || server.host}]`);
 
     conn = await mysql.createConnection({
-      host: process.env.MYSQL_HOST,
-      port: parseInt(process.env.MYSQL_PORT) || 3306,
-      user: process.env.MYSQL_USER,
-      password: process.env.MYSQL_PASSWORD,
+      host:     server.host,
+      port:     parseInt(server.port) || 3306,
+      user:     server.username,
+      password: server.password,
     });
 
     console.log("MySQL/MariaDB Connected ✅");
@@ -67,7 +68,7 @@ async function collectMySQL() {
     for (const row of rows) {
       await insertMetric([
         'MYSQL',
-        process.env.MYSQL_HOST,
+        server.host,
         row.db_name,
         row.backup_type,
         row.start_time,

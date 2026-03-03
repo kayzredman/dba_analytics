@@ -8,20 +8,21 @@ try {
   // Already initialized or not needed
 }
 
-async function collectOracle() {
+// server: { host, port, username, password, connect_string, label, db_type }
+async function collectOracle(server) {
   let conn;
 
   try {
-    console.log("Connecting to Oracle...");
+    console.log(`Connecting to Oracle: ${server.label || server.host}`);
 
     const connConfig = {
-      user: process.env.ORACLE_USER,
-      password: process.env.ORACLE_PASSWORD,
-      connectString: process.env.ORACLE_CONNECT_STRING,
+      user:          server.username,
+      password:      server.password,
+      connectString: server.connect_string,
       connectTimeout: 10,
     };
 
-    if (process.env.ORACLE_USER?.toLowerCase() === 'sys') {
+    if (server.username?.toLowerCase() === 'sys') {
       connConfig.privilege = oracledb.SYSDBA;
     }
 
@@ -61,11 +62,11 @@ async function collectOracle() {
 
     for (const row of result.rows) {
       // Extract SID/service from connect string (handles both host/service and SID format)
-      const cs = process.env.ORACLE_CONNECT_STRING || '';
+      const cs = server.connect_string || '';
       const dbName = cs.includes('SID=')
         ? cs.match(/SID=([^)]+)/)?.[1]
         : cs.split('/')[1] || cs;
-      const hostName = process.env.ORACLE_HOST || cs.match(/HOST=([^)]+)/)?.[1] || cs;
+      const hostName = server.host || cs.match(/HOST=([^)]+)/)?.[1] || cs;
 
       await insertMetric([
         'ORACLE',

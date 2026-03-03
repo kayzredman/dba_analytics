@@ -1,16 +1,17 @@
 const sql = require('mssql');
 const { insertMetric } = require('../db');
 
-async function collectSQLServer() {
-  console.log("Connecting to SQL Server at:", process.env.SQLSERVER_HOST);
+// server: { host, port, username, password, label, db_type }
+async function collectSQLServer(server) {
+  console.log(`Connecting to SQL Server at: ${server.host} [${server.label || server.host}]`);
 
   let pool;
   try {
     pool = await sql.connect({
-      user: process.env.SQLSERVER_USER,
-      password: process.env.SQLSERVER_PASSWORD,
-      server: process.env.SQLSERVER_HOST,
-      port: parseInt(process.env.SQLSERVER_PORT),
+      user:     server.username,
+      password: server.password,
+      server:   server.host,
+      port:     parseInt(server.port) || 1433,
       database: 'msdb',
       options: {
         encrypt: false,
@@ -44,7 +45,7 @@ async function collectSQLServer() {
       console.log(`Inserting metric for DB: ${row.database_name}, type: ${typeMap[row.type] || row.type}`);
       await insertMetric([
         "SQLSERVER",
-        process.env.SQLSERVER_HOST,
+        server.host,
         row.database_name,
         typeMap[row.type] || row.type,
         row.backup_start_date,

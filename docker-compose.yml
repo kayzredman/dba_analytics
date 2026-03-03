@@ -28,6 +28,8 @@ services:
         condition: service_healthy
     env_file:
       - ./backup-collector/.env
+    environment:
+      MASTER_KEY: ${MASTER_KEY:-change-me-to-a-strong-random-secret-key}
     restart: always
 
   dashboard:

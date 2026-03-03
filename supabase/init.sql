@@ -1,3 +1,26 @@
+
+-- ============================================================
+-- EXTENSIONS
+-- ============================================================
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- ============================================================
+-- MONITORED SERVERS (dynamic DB registry with encrypted creds)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS monitored_servers (
+  id              SERIAL PRIMARY KEY,
+  db_type         TEXT        NOT NULL,  -- SQLSERVER | ORACLE | MYSQL
+  host            TEXT        NOT NULL,
+  port            INT,
+  username        TEXT        NOT NULL,
+  password_enc    BYTEA       NOT NULL,  -- AES-256 via pgp_sym_encrypt
+  connect_string  TEXT,                  -- Oracle only
+  label           TEXT,                  -- friendly name, e.g. "Finance SQL Server"
+  enabled         BOOLEAN     NOT NULL DEFAULT TRUE,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_monitored_servers UNIQUE (db_type, host)
+);
+
 CREATE TABLE IF NOT EXISTS backup_metrics (
   id                  SERIAL PRIMARY KEY,
   db_type             TEXT        NOT NULL,
