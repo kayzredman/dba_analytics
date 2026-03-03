@@ -1,7 +1,7 @@
 const cron = require('node-cron');
-const { insertMetric } = require('./db');
 const collectSQLServer = require('./collectors/sqlserver');
 const collectOracle = require('./collectors/oracle');
+const collectMySQL = require('./collectors/mysql');
 
 console.log("Backup Collector Started...");
 
@@ -9,29 +9,8 @@ console.log("Backup Collector Started...");
 (async () => {
   // try { await collectSQLServer(); } catch (err) { console.error("SQL Collector error:", err); }
   try { await collectOracle(); } catch (err) { console.error("Oracle Collector error:", err); }
+  try { await collectMySQL(); } catch (err) { console.error("MySQL Collector error:", err); }
 })();
-
-cron.schedule('*/5 * * * *', async () => {
-  try {
-    console.log("Running test insert...");
-
-    await insertMetric([
-      "TEST",
-      "localhost",
-      "demo",
-      "FULL",
-      new Date(),
-      new Date(),
-      1,
-      0.01,
-      "SUCCESS"
-    ]);
-
-    console.log("Insert complete.");
-  } catch (err) {
-    console.error("Collector error:", err);
-  }
-});
 
 cron.schedule('0 * * * *', async () => {
   try {
@@ -46,5 +25,13 @@ cron.schedule('0 * * * *', async () => {
     await collectOracle();
   } catch (err) {
     console.error("Oracle Collector error:", err);
+  }
+});
+
+cron.schedule('0 * * * *', async () => {
+  try {
+    await collectMySQL();
+  } catch (err) {
+    console.error("MySQL Collector error:", err);
   }
 });

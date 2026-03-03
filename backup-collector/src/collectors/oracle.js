@@ -65,10 +65,11 @@ async function collectOracle() {
       const dbName = cs.includes('SID=')
         ? cs.match(/SID=([^)]+)/)?.[1]
         : cs.split('/')[1] || cs;
+      const hostName = process.env.ORACLE_HOST || cs.match(/HOST=([^)]+)/)?.[1] || cs;
 
       await insertMetric([
-        "ORACLE",
-        process.env.ORACLE_CONNECT_STRING,
+        'ORACLE',
+        hostName,
         dbName,
         row.INPUT_TYPE,
         row.START_TIME,

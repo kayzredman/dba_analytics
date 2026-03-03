@@ -23,7 +23,7 @@ async function insertMetric([
     `INSERT INTO backup_metrics
       (db_type, host, database_name, backup_type, backup_start_date, backup_finish_date, duration_minutes, size_gb, status)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     ON CONFLICT DO NOTHING`,
+     ON CONFLICT (db_type, host, database_name, backup_type, backup_start_date) DO NOTHING`,
     [db_type, host, database_name, backup_type, backup_start_date, backup_finish_date, duration_minutes, size_gb, status]
   );
 }
